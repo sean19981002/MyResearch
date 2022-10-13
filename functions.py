@@ -1,0 +1,133 @@
+import sys
+import threading
+import pandas as pd
+import tweepy
+import requests
+import datetime
+import json
+import matplotlib.pyplot as plt
+from IPython.display import display
+from threading import Thread
+import time
+import queue 
+import multiprocessing as mp
+from tqdm import tqdm
+import datetime
+
+# if there are multiple json file need to be union，use ths function.
+def union_JSON_files(file_list:list):
+    # load retweeters file
+    retweeter_dict = dict() 
+    for filename in file_list:
+        with open(filename, 'r') as f:
+            json_file = json.load(f)
+            for tweet_id in json_file:
+                retweeter_dict[tweet_id] = json_file[tweet_id]
+    return retweeter_dict
+
+# Slicing list into chunks, each chunk has n elements.
+def chunks(xs, n):
+        n = max(1, n)
+        return (xs[i:i+n] for i in range(0, len(xs), n))
+
+
+# get retweeters with only one token
+def Get_Retweeters(tweet_list:list, index:int, token:str, file_path:str):
+        """
+        this api will return a dict. 
+        keys are Tweet ID.
+        values are a list of the retweeters of this Tweet.
+        the dict will save as .json file, file name is [client_index]_retweeters.json
+        """
+        dict_retweet_id = {} # storing dict -> tweet id:[list of retweeters]
+        client = tweepy.Client(bearer_token=token, wait_on_rate_limit=True)
+        f = open(file_path + str(index) + '_retweeters.json', 'a')
+
+        for tweet_id in tweet_list: # getting retweeter's id
+            RetweeterID_list = [] # 創一個空的 list，用來存放此篇 tweet 的 retweeter 的 user id
+            #  利用 tweet ID 搜尋轉推此貼文的 retweeters
+            for retweeter in tweepy.Paginator(client.get_retweeters, tweet_id).flatten():
+                RetweeterID_list.append(retweeter.id)
+            
+            dict_retweet_id[tweet_id] = RetweeterID_list
+            t = json.dump(dict_retweet_id, f, indent=True) # write json file
+        f.close()
+    
+# get follwers of everyusers
+def Get_Followers(user:list, index:int, token:str, file_path:str):
+    """
+    this api will return a dict.
+    key is user_id.
+    value is list of follwers of this user.
+    the dict will save as .json file, file name is [index]_follower.json
+    """
+    dict_followers = {} # key:user_id, value:list of follwers
+    client = tweepy.Client(bearer_token=token, wait_on_rate_limit=True)
+    # get followers id
+    f = open(file_path + '_' + str(index) + '_follwer.json', 'a')
+
+    for user_id in user:
+        followers_list = []
+        # 利用 user_id 去尋找此 user 的 followers, 並存進 list
+        for follower in tweepy.Paginator(client.get_users_followers, user_id).flatten(limit=1000000000):
+            followers_list.append(follower.id)
+        
+        dict_followers[user_id] = followers_list
+        t = json.dump(dict_followers, f, indent=True) # write json file
+    f.close()
+    print("Multi Thread crawling Completed !")
+
+
+
+# Counting how many retweets the users had, will append dict into mp.manager's list
+def UserRetweetCount(retweeter_dict:dict, retweeters:list, q:mp.Queue, requests_count:int, seq_id:int, result):
+    # send sub-list into here
+    user_retweet_count = dict.fromkeys(retweeters, 0)
+    total = len(retweeters) * requests_count # total iterations
+
+    # if user has retweeted this tweet, the mapped value will plus 1
+    
+    for tweet_id in retweeter_dict.keys():
+        for user_id in retweeters:
+            if user_id in retweeter_dict[tweet_id]:
+                user_retweet_count[user_id] += 1
+    result.update(user_retweet_count)
+    #q.put(user_retweet_count)
+
+
+
+def UserRetweetCount_MultiCore(parallelism:int, retweeters:list, retweeter_dict:dict, requests_count:int):
+    # thread's parrelle degree
+    pieces = int(len(retweeters) / parallelism)
+    if int(len(retweeters)) % parallelism > 0:
+        pieces += 1
+    retweeters_list = list( chunks(retweeters, pieces) ) # slicing list into pieces
+    threads = []
+    q = mp.Queue() # for collecting the output values of each process
+    manager = mp.Manager()
+    result = manager.dict()
+
+    print("Parrelle degree: ", len(retweeters_list))
+    # start multi threading
+    print("Start dispatching Multi-Process....")
+    for i in range(parallelism):
+         # adding threads into list
+        t = mp.Process(target=UserRetweetCount, args=(retweeter_dict, retweeters_list[i], q, requests_count, i, result))
+        threads.append(t)
+
+    print("Start running all sub-process......")
+    for i in range(parallelism):
+        threads[i].start()
+        
+    print("Wait for resulst of all sub-process......")
+    for i in range(parallelism):
+        threads[i].join() # wait for all threads done
+    
+    # Union the results from every thread
+    print("Jobs done ! Start union all results")
+    """for _ in range(parallelism):
+        return_value = q.get()
+        result |= return_value
+    """
+    
+    return result
