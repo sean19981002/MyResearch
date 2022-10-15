@@ -1,5 +1,6 @@
 import sys
 import threading
+from unittest import result
 import pandas as pd
 import tweepy
 import requests
@@ -30,9 +31,35 @@ def chunks(xs, n):
         n = max(1, n)
         return (xs[i:i+n] for i in range(0, len(xs), n))
 
+# split dict into many pieces, store each piece of dict into a return list.
+def split_dictionary(input_dict, chunk_size):
+    res = []
+    new_dict = {}
+    for k, v in input_dict.items():
+        if len(new_dict) < chunk_size:
+            new_dict[k] = v
+        else:
+            res.append(new_dict)
+            new_dict = {k: v}
+    res.append(new_dict)
+    return res
+
+
+def h(num:int):
+    dict1 = dict()
+    dict2 = dict()
+    for i in range(10):
+        dict1[i] = [j for j in range(100)]
+    with open(str(num) + '.json', 'w') as f:
+        json.dump(dict1, f, indent=True)
+    
+    for i in range(12,20,1):
+        dict2[i] = [j for j in range(1000)]
+    with open(str(num) + '.json', 'w') as f:
+        json.dump(dict2, f, indent=True)
 
 # get retweeters with only one token
-def Get_Retweeters(tweet_list:list, index:int, token:str, file_path:str):
+def Get_Retweeters(tweet_list:list, index:int, token:str, file_path:str, result):
         """
         this api will return a dict. 
         keys are Tweet ID.
@@ -41,7 +68,7 @@ def Get_Retweeters(tweet_list:list, index:int, token:str, file_path:str):
         """
         dict_retweet_id = {} # storing dict -> tweet id:[list of retweeters]
         client = tweepy.Client(bearer_token=token, wait_on_rate_limit=True)
-        f = open(file_path + str(index) + '_retweeters.json', 'a')
+        f = open(file_path + str(index) + '_retweeters.json', 'w')
 
         for tweet_id in tweet_list: # getting retweeter's id
             RetweeterID_list = [] # 創一個空的 list，用來存放此篇 tweet 的 retweeter 的 user id
@@ -51,10 +78,11 @@ def Get_Retweeters(tweet_list:list, index:int, token:str, file_path:str):
             
             dict_retweet_id[tweet_id] = RetweeterID_list
             t = json.dump(dict_retweet_id, f, indent=True) # write json file
+            result |= dict_retweet_id
         f.close()
     
 # get follwers of everyusers
-def Get_Followers(user:list, index:int, token:str, file_path:str):
+def Get_Followers(user:list, index:int, token:str, file_path:str, result):
     """
     this api will return a dict.
     key is user_id.
@@ -64,7 +92,7 @@ def Get_Followers(user:list, index:int, token:str, file_path:str):
     dict_followers = {} # key:user_id, value:list of follwers
     client = tweepy.Client(bearer_token=token, wait_on_rate_limit=True)
     # get followers id
-    f = open(file_path + '_' + str(index) + '_follwer.json', 'a')
+    f = open(file_path + '_' + str(index) + '_follwer.json', 'w')
 
     for user_id in user:
         followers_list = []
@@ -74,8 +102,9 @@ def Get_Followers(user:list, index:int, token:str, file_path:str):
         
         dict_followers[user_id] = followers_list
         t = json.dump(dict_followers, f, indent=True) # write json file
+        result |= dict_followers
     f.close()
-    print("Multi Thread crawling Completed !")
+
 
 
 
@@ -131,3 +160,44 @@ def UserRetweetCount_MultiCore(parallelism:int, retweeters:list, retweeter_dict:
     """
     
     return result
+
+
+def FindTargetUser(bound:int, retweeters:dict, result):
+
+    for i in retweeters.keys():
+        if retweeters[i] > bound:
+            result.append(i)
+
+def FindTargetUser_MultiCore(bound:int, retweeters:dict):
+    paralle = 8
+    process = list()
+    manager = mp.Manager()
+    result = manager.list()
+
+    # slicing dict into 8 pieces
+    chunk_size = int(len(retweeters))
+    if chunk_size % 8 > 0:
+        chunk_size = int(chunk_size/8)
+        chunk_size += 1
+    else:
+        chunk_size = int(chunk_size/8)
+    # every element in this list is an dict with equal size(except the last one)
+    retweeters_chunked_list = split_dictionary(input_dict=retweeters, chunk_size=chunk_size)
+
+    print("Parralle degree", paralle)
+    for i in range(paralle):
+        t = mp.Process(
+            target=FindTargetUser,
+            args=(bound, retweeters_chunked_list[i], result)
+        )
+        process.append(t)
+    
+    print("Start running all sub-process")
+    for i in range(paralle):
+        process[i].start()
+    
+    print("Wait for resulst of all sub-process......")
+    for i in range(paralle):
+        process[i].join() # wait for all processes are done.
+
+    return list(result)

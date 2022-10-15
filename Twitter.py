@@ -1,3 +1,4 @@
+from turtle import done
 import pandas as pd
 import tweepy
 import requests
@@ -6,7 +7,7 @@ import json
 import matplotlib.pyplot as plt
 from IPython.display import display
 from threading import Thread
-from my_func import *
+from functions import *
 
 class MyThread(Thread):
     def __init__(self, func, args):
@@ -89,7 +90,7 @@ class Data_crawl:
         # multi threading 
         threads = []
         for i in range(len(self.token)):
-            t = MyThread(func=Get_Retweeters_dict_SingleThread, args=(tweet_list[i], i, self.token[i], filename, ))
+            t = MyThread(func=Get_Retweeters, args=(tweet_list[i], i, self.token[i], filename, ))
             threads.append(t)
         # start running
         for i in range(len(self.token)):
@@ -102,6 +103,27 @@ class Data_crawl:
         #for i in range(pieces):
         #   values.append(threads[i].get_results())
     
-    def Get_Followers_MultiThread(self, filename:str):
-        pass
+    def Get_Followers_MultiCore(self, target_users:list, file_path:str):
+        paralle = len(self.token)
+        process = list()
+        manager = mp.Manager()
+        result = manager.dict()
+
+        print("Start dispatching multi process...")
+        for i in range(paralle):
+            t = mp.Process(
+                target=Get_Followers, 
+                args=(target_users, i, self.token[i], file_path, result,))
+            process.append(t)
+        
+        print("Start collecting followers of target users...")
+        for i in range(paralle):
+            process[i].start()
+
+        print("Wait for all process....")
+        for i in range(paralle):
+            process[i].join()
+        
+        print("Collecting Done !")
+        return result # dict {user_id : [followers]}
 
