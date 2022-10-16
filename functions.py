@@ -45,18 +45,6 @@ def split_dictionary(input_dict, chunk_size):
     return res
 
 
-def h(num:int):
-    dict1 = dict()
-    dict2 = dict()
-    for i in range(10):
-        dict1[i] = [j for j in range(100)]
-    with open(str(num) + '.json', 'w') as f:
-        json.dump(dict1, f, indent=True)
-    
-    for i in range(12,20,1):
-        dict2[i] = [j for j in range(1000)]
-    with open(str(num) + '.json', 'w') as f:
-        json.dump(dict2, f, indent=True)
 
 # get retweeters with only one token
 def Get_Retweeters(tweet_list:list, index:int, token:str, file_path:str, result):
@@ -201,3 +189,33 @@ def FindTargetUser_MultiCore(bound:int, retweeters:dict):
         process[i].join() # wait for all processes are done.
 
     return list(result)
+
+
+def Get_User_Tweets(token:str, target_users:list, biden_tweets:list, num:int, result):
+    """
+    This api is for searching the the tweet's wall of target users,
+    to see which post of their's are the retweets of Biden's tweets in last 7 days.
+    the result will be a dict -> {user_id : list(their tweets id) }.
+    The length of every list of target users should be equal to their retweet count.
+    """
+    user_tweet_id = dict()
+    client = tweepy.Client(
+        bearer_token = token,
+        wait_on_rate_limit = True 
+    )
+    
+    for id in target_users:
+        for tweet in tweepy.Paginator(
+            client.get_users_tweets, 
+            id=id, 
+            end_time='2022-10-11T00:00:00Z',
+            start_time='2022-10-03T00:00:00Z',
+            tweet_fields=['context_annotations','created_at','referenced_tweets'],
+            expansions=['referenced_tweets.id'], 
+            max_results=100):
+
+            ref_tweet = str(tweet.referenced_tweets)
+            ref_tweet = ref_tweet.replace('[<ReferencedTweet id=','').replace(' type=','').replace('replied_to]','').replace('retweeted]','').replace('quoted]','')
+            
+
+

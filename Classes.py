@@ -31,7 +31,7 @@ class Data_crawl:
         self.filename = 'Biden/' + today + '/' + today
         self.tweets_df : pd.DataFrame
 
-    def Get_Tweets_Dataframe(self, query:str, tweet_fields:list):
+    def Get_Tweets_Dataframe(self, query='', tweet_fields=[], wanna_download=False, tweet_df=pd.DataFrame()):
         # 時間格式需要符合 twitter 的格式：Year-Month-date + "T" + Hour:Minute:Second + "Z"
         end_time  = datetime.datetime.today() # end time is today's 00:00
         end_time = end_time.strftime('%Y-%m-%dT')
@@ -47,36 +47,39 @@ class Data_crawl:
         access_token = '1467171706754453504-EJx2MzY1RtEGHXf3hqBZkANnsc4hA2'
         access_token_secret = 'VpVdfP1WhID2nas76BXRTMdXXOTvx1BPO1J9LDYs9QM65'
 
-        client = tweepy.Client(
-            bearer_token = bearer_token,
-            consumer_key = api_key,
-            consumer_secret = api_key_secret,
-            access_token = access_token,
-            access_token_secret = access_token_secret,
-            return_type = requests.Response
-        )
-        tweets = client.search_recent_tweets(
-            query = query,
-            tweet_fields = tweet_fields,
-            max_results = 100
-        )
+        if wanna_download:
+            client = tweepy.Client(
+                bearer_token = bearer_token,
+                consumer_key = api_key,
+                consumer_secret = api_key_secret,
+                access_token = access_token,
+                access_token_secret = access_token_secret,
+                return_type = requests.Response
+            )
+            tweets = client.search_recent_tweets(
+                query = query,
+                tweet_fields = tweet_fields,
+                max_results = 100
+            )
 
-        # convert to dataframe
-        tweets = tweets.json() # Save data as dictionary
-        tweets_data = tweets['data'] # Extract "data" value from dictionary
-        tweet_df = pd.json_normalize(tweets_data)
-        tweet_df['author_id'] = tweet_df['author_id'].astype('str')
-        tweet_df['id'] = tweet_df['id'].astype('str')
-        with open(self.filename + '.xlsx', 'w') as f:
-            xlsx_writer = pd.ExcelWriter(self.filename  + ".xlsx", engine = 'xlsxwriter') # 寫進 excel 用的
-            tweet_df.to_excel(xlsx_writer, sheet_name='Biden') # 先把 Biden 專業上的 tweet sheet 存檔
-            xlsx_writer.save()
-        self.tweets_df = tweet_df
-        return tweet_df
+            # convert to dataframe
+            tweets = tweets.json() # Save data as dictionary
+            tweets_data = tweets['data'] # Extract "data" value from dictionary
+            tweet_df = pd.json_normalize(tweets_data)
+            tweet_df['author_id'] = tweet_df['author_id'].astype('str')
+            tweet_df['id'] = tweet_df['id'].astype('str')
+            with open(self.filename + '.xlsx', 'w') as f:
+                xlsx_writer = pd.ExcelWriter(self.filename  + ".xlsx", engine = 'xlsxwriter') # 寫進 excel 用的
+                tweet_df.to_excel(xlsx_writer, sheet_name='Biden') # 先把 Biden 專業上的 tweet sheet 存檔
+                xlsx_writer.save()
+            self.tweets_df = tweet_df
+            return tweet_df
+        else:
+            self.tweets_df = tweet_df
 
 
 
-    def Get_Retweeters_MultiThread(self, filename:str):
+    def Get_Retweeters_Multi(self, filename:str):
         # choose how many pieces
         tweet_list = list(self.tweets_df['id'])
         pieces = int(len(tweet_list) / len(self.token))
@@ -102,6 +105,30 @@ class Data_crawl:
         #for i in range(pieces):
         #   values.append(threads[i].get_results())
     
-    def Get_Followers_MultiThread(self, filename:str):
+    def Get_Followers_Multi(self, target_users:list, file_path:str):
+        paralle = len(self.token)
+        process = list()
+        manager = mp.Manager()
+        result = manager.dict()
+        tweet_list = list(self.tweets_df['id'])
+        print("Start dispatching multi process...")
+        for i in range(paralle):
+            t = mp.Process(
+                target=Get_Followers, 
+                args=(target_users, i, self.token[i], file_path, result,))
+            process.append(t)
+        
+        print("Start collecting followers of target users...")
+        for i in range(paralle):
+            process[i].start()
+
+        print("Wait for all process....")
+        for i in range(paralle):
+            process[i].join()
+        
+        print("Collecting Done !")
+        return result # dict {user_id : [followers]}
+    
+    def Get_User_Tweets():
         pass
 
