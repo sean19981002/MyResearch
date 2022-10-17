@@ -1,1 +1,1 @@
-None
+<ReferencedTweet id=1579294143137734656 type=quoted

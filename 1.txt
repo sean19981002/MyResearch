@@ -1,1 +1,1 @@
-1576738133005123584
+<ReferencedTweet id=1579562044449513472 type=retweeted
