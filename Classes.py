@@ -129,6 +129,33 @@ class Data_crawl:
         print("Collecting Done !")
         return result # dict {user_id : [followers]}
     
-    def Get_User_Tweets():
-        pass
+    
+    def Get_User_Tweets_Multi(self, file_path:str, target_user:list):
+        paralle = len(self.token)
+        process = list() # list saves multi-process
+        manager = mp.Manager()
+        result = manager.dict() # for union results from every process
+        biden_tweets = list(self.tweets_df['id'])
+        piece = int(len(target_user) / paralle)
+        if len(target_user) % paralle > 0:
+            piece += 1
 
+        target_user = list(chunks(target_user, piece))
+
+        for i in range(paralle):
+            p = mp.Process(
+                target = Get_User_Tweets,
+                args = (self.token[i], target_user[i], biden_tweets, i, result))
+            process.append(p)
+        
+        for i in range(paralle):
+            process[i].start()
+        
+        for i in range(paralle):
+            process[i].join()
+        
+        with open(file_path + "TargetUserTweet_total.json", 'w') as f:
+            x = json.dumps(result.copy())
+            json.dump(x, f, indent=True)
+        
+        return result

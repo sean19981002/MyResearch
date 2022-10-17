@@ -40,13 +40,21 @@
 >   + 抓取 active/inactive 的時間點：6, 9, 12, 15, 18, 24, 30, 36, 42, 48, 54, 60 hr.
 
 > # 10/13 Meeting
->+ 前七天的 tweet (57) 抓下來
->   - retweeters 抓下來，找出 target users (retweet 少於5篇的刪除)
->   - 找 target users 和 follow list
->   - follow 關係建 base graph(一張)
+>   + 前七天的 tweet (57) 抓下來
+>       - retweeters 抓下來，找出 target users (retweet 少於5篇的刪除)
+>       - 找 target users 和 follow list
+>       - follow 關係建 base graph(一張)
 >
->+ 後七天的 tweet 抓下來
->   - 再看 target users(爬他們的強) 的 retweet 時間
->   - 建出 12 * tweets 張 data graph 
->   - 12 個時間點：6, 9, 12, 15, 18, 24, 30, 36, 42, 48, 54, 60 hr.
->   - 用 active/inactive 的關係建 data graph
+>   + 後七天的 tweet 抓下來
+>       - 再看 target users(爬他們的強) 的 retweet 時間
+>       - 建出 12 * tweets 張 data graph 
+>       - 12 個時間點：6, 9, 12, 15, 18, 24, 30, 36, 42, 48, 54, 60 hr.
+>       - 用 active/inactive 的關係建 data graph
+
+> # 10/17
+>   + functions.py :
+>       1. 使用 target users 的 id，去抓取每個 target user 牆上的 tweet。
+>       2. 抓出 reference id，將多餘字元去除。
+>       3. 比對 reference id 是否 in 那 57 篇 Biden tweets，有的話建成 list，將 此篇推文的 id, timestamp, reference id 存進list，再將此 list 存進另外一個 list。
+>       4. 每抓完一個 user 的資料，將上述二維的 list 指派進 dict，此 dict 的 key 為 id of this target user。
+>       5. 寫入一次檔案

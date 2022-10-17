@@ -205,6 +205,7 @@ def Get_User_Tweets(token:str, target_users:list, biden_tweets:list, num:int, re
     )
     
     for id in target_users:
+        colloection = list()
         for tweet in tweepy.Paginator(
             client.get_users_tweets, 
             id=id, 
@@ -212,10 +213,25 @@ def Get_User_Tweets(token:str, target_users:list, biden_tweets:list, num:int, re
             start_time='2022-10-03T00:00:00Z',
             tweet_fields=['context_annotations','created_at','referenced_tweets'],
             expansions=['referenced_tweets.id'], 
-            max_results=100):
+            max_results=100).flatten(limit=100000000):
 
             ref_tweet = str(tweet.referenced_tweets)
             ref_tweet = ref_tweet.replace('[<ReferencedTweet id=','').replace(' type=','').replace('replied_to]','').replace('retweeted]','').replace('quoted]','')
-            
+            with open("%d.txt" % num, "w") as f:
+                f.write(ref_tweet)
+            if ref_tweet != None: # if this tweet of the user has retweet any tweet
+                ref_tweet = int(ref_tweet)
+                if ref_tweet in biden_tweets:
+                    tmp = [tweet.id, tweet.created_at, ref_tweet]
+                    colloection.append(tmp)
+        
+        if len(colloection) > 0:
+        # append referenced tweets for user
+            user_tweet_id[id] = colloection
+            with open("TargetUserTweet%d.json" % num, "w") as f:
+                json_f = json.dumps(user_tweet_id, f, indent=True)
+                json.dump(user_tweet_id, f, indent=True)
+
+    result |= user_tweet_id
 
 
