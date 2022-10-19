@@ -214,9 +214,14 @@ def Get_User_Tweets(token:str, target_users:list, biden_tweets:list, num:int, re
             tweet_fields=['created_at','referenced_tweets'],
             expansions=['referenced_tweets.id'], 
             max_results=100).flatten(limit=100000000):
-
+            dissapear = [
+                '<ReferencedTweet',
+                ' ',
+                'id=',
+                ''
+            ]
             ref_tweet = tweet.referenced_tweets
-            #ref_tweet = ref_tweet.replace('[<ReferencedTweet id=','').replace(' type=','').replace('replied_to]','').replace('retweeted]','').replace('quoted]','')
+            ref_tweet = ref_tweet.replace('[<ReferencedTweet id=','').replace(' type=','').replace('replied_to]','').replace('retweeted]','').replace('quoted]','')
             with open("%d.txt" % num, "w") as f:
                 for i in ref_tweet:
                     f.write(str(i) + "\n")
