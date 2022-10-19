@@ -14,6 +14,9 @@ import queue
 import multiprocessing as mp
 from tqdm import tqdm
 import datetime
+import re
+
+
 
 # if there are multiple json file need to be union，use ths function.
 def union_JSON_files(file_list:list):
@@ -204,31 +207,27 @@ def Get_User_Tweets(token:str, target_users:list, biden_tweets:list, num:int, re
         wait_on_rate_limit = True 
     )
     
+    
     for id in target_users:
         colloection = list()
         for tweet in tweepy.Paginator(
             client.get_users_tweets, 
             id=id, 
-            end_time='2022-10-11T00:00:00Z',
-            start_time='2022-10-03T00:00:00Z',
+            end_time='2022-10-17T00:00:00Z',
+            start_time='2022-10-13T00:00:00Z',
             tweet_fields=['created_at','referenced_tweets'],
             expansions=['referenced_tweets.id'], 
             max_results=100).flatten(limit=100000000):
-            dissapear = [
-                '<ReferencedTweet',
-                ' ',
-                'id=',
-                ''
-            ]
-            ref_tweet = tweet.referenced_tweets
-            ref_tweet = ref_tweet.replace('[<ReferencedTweet id=','').replace(' type=','').replace('replied_to]','').replace('retweeted]','').replace('quoted]','')
-            with open("%d.txt" % num, "w") as f:
-                for i in ref_tweet:
-                    f.write(str(i) + "\n")
-            if ref_tweet.id != None: # if this tweet of the user has retweet any tweet
-                #ref_tweet = int(ref_tweet)
-                if int(ref_tweet.id) in biden_tweets:
-                    tmp = [tweet.id, tweet.created_at, ref_tweet.id]
+
+            # parsing the referenced_tweet from <Referenced...> into id only
+            s = str(tweet.referenced_tweets)
+            ref_tweet = FindReferencedID(s=s)
+
+
+            if len(ref_tweet) != 0: # if this tweet of the user has retweet any tweet
+                ref_tweet = int(ref_tweet)
+                if ref_tweet in biden_tweets:
+                    tmp = [tweet.id, tweet.created_at, ref_tweet]
                     colloection.append(tmp)
         
         if len(colloection) > 0:
@@ -241,3 +240,13 @@ def Get_User_Tweets(token:str, target_users:list, biden_tweets:list, num:int, re
     result |= user_tweet_id
 
 
+
+def FindReferencedID(s:str):
+    integers = [str(i) for i in range(10)] # for recognize numbers or characters. 
+    id_pos = re.search("id=", s).end() # find the end position of "id="
+    ref_id = ''
+    for i in range(id_pos, len(s)):
+        if s[i] == ' ':
+            return ref_id
+        if s[i] in integers:
+            ref_id += s[i]

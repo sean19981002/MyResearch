@@ -139,9 +139,7 @@ class Data_crawl:
         piece = int(len(target_user) / paralle)
         if len(target_user) % paralle > 0:
             piece += 1
-
         target_user = list(chunks(target_user, piece))
-
         for i in range(paralle):
             p = mp.Process(
                 target = Get_User_Tweets,

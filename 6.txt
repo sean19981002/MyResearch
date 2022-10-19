@@ -1,1 +1,0 @@
-<ReferencedTweet id=1579539085408227328 type=replied_to
