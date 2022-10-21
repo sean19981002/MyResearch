@@ -113,8 +113,7 @@ class Data_crawl:
         process = list()
         manager = mp.Manager()
         result = manager.dict()
-        user = chunks(target_users, piece)
-
+        user = list( chunks(target_users, piece) )
 
         print("Start dispatching multi process...")
         for i in range(paralle):

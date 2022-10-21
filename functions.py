@@ -92,10 +92,9 @@ def Get_Followers(target_users:list, user:list, index:int, token:str, file_path:
             if follower.id in target_users:
                 followers_list.append(follower.id)
         
-        with open(file_path + "_%d_followers.json" % index, "w") as f:
+        with open(file_path + "%d_followers.json" % index, "w") as f:
             dict_followers[user_id] = followers_list
             t = json.dump(dict_followers, f, indent=True) # write json file
-    
     result |= dict_followers
  
 
