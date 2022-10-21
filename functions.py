@@ -73,7 +73,7 @@ def Get_Retweeters(tweet_list:list, index:int, token:str, file_path:str, result)
         f.close()
     
 # get follwers of everyusers
-def Get_Followers(user:list, index:int, token:str, file_path:str, result):
+def Get_Followers(target_users:list, user:list, index:int, token:str, file_path:str, result):
     """
     this api will return a dict.
     key is user_id.
@@ -88,13 +88,16 @@ def Get_Followers(user:list, index:int, token:str, file_path:str, result):
     for user_id in user:
         followers_list = []
         # 利用 user_id 去尋找此 user 的 followers, 並存進 list
-        for follower in tweepy.Paginator(client.get_users_followers, user_id).flatten(limit=1000000000):
-            followers_list.append(follower.id)
+        for follower in tweepy.Paginator(client.get_users_followers, user_id).flatten():
+            if follower.id in target_users:
+                followers_list.append(follower.id)
         
-        dict_followers[user_id] = followers_list
-        t = json.dump(dict_followers, f, indent=True) # write json file
-        result |= dict_followers
-    f.close()
+        with open(file_path + "_%d_followers.json" % index, "w") as f:
+            dict_followers[user_id] = followers_list
+            t = json.dump(dict_followers, f, indent=True) # write json file
+    
+    result |= dict_followers
+ 
 
 
 
@@ -207,46 +210,63 @@ def Get_User_Tweets(token:str, target_users:list, biden_tweets:list, num:int, re
         wait_on_rate_limit = True 
     )
     
-    
+    print("process %d waiting..." % num)
+    sys.stdout.flush()
+    time.sleep(180 * num)
+    print("process %d start running !\n" % num)
+    sys.stdout.flush()
     for id in target_users:
         colloection = list()
         for tweet in tweepy.Paginator(
             client.get_users_tweets, 
             id=id, 
             end_time='2022-10-17T00:00:00Z',
-            start_time='2022-10-13T00:00:00Z',
+            start_time='2022-10-10T00:00:00Z',
             tweet_fields=['created_at','referenced_tweets'],
             expansions=['referenced_tweets.id'], 
-            max_results=100).flatten(limit=100000000):
+            max_results=100).flatten(limit=5000):
 
             # parsing the referenced_tweet from <Referenced...> into id only
             s = str(tweet.referenced_tweets)
-            ref_tweet = FindReferencedID(s=s)
 
-
-            if len(ref_tweet) != 0: # if this tweet of the user has retweet any tweet
-                ref_tweet = int(ref_tweet)
-                if ref_tweet in biden_tweets:
-                    tmp = [tweet.id, tweet.created_at, ref_tweet]
-                    colloection.append(tmp)
+            if "id" in s: # if this tweet of the user has retweet any tweet
+                ref_tweet = FindReferencedID(s=s)
+                if ref_tweet != '':
+                    ref_tweet = int(ref_tweet)
+                    if ref_tweet in biden_tweets:
+                        tmp = [id, ref_tweet, tweet.id, tweet.created_at, ref_tweet]
+                        colloection.append(tmp)
         
         if len(colloection) > 0:
         # append referenced tweets for user
             user_tweet_id[id] = colloection
-            with open("TargetUserTweet%d.json" % num, "w") as f:
-                json_f = json.dumps(user_tweet_id, f, indent=True)
-                json.dump(user_tweet_id, f, indent=True)
+            #with open("TargetUserTweet%d.json" % num, "w") as f:
+            #   json_f = json.dumps(user_tweet_id, f, indent=True)
+            #   json.dump(user_tweet_id, f, indent=True)
+            with open("%d.txt" % num, "a") as f:
+                for i in colloection:
+                    for j in i:
+                        f.write(str(j) + " ")
+                    f.write("\n")
 
-    result |= user_tweet_id
+                f.write("\n")
+                
+
+    #result |= user_tweet_id
 
 
 
 def FindReferencedID(s:str):
     integers = [str(i) for i in range(10)] # for recognize numbers or characters. 
-    id_pos = re.search("id=", s).end() # find the end position of "id="
     ref_id = ''
-    for i in range(id_pos, len(s)):
-        if s[i] == ' ':
-            return ref_id
-        if s[i] in integers:
-            ref_id += s[i]
+    try:
+        id_pos = re.search("id=", s).end() # find the end position of "id="
+        for i in range(id_pos, len(s)):
+            if s[i] == ' ':
+                return ref_id
+            if s[i] in integers:
+                ref_id += s[i]
+    except:
+        return ref_id
+    
+    

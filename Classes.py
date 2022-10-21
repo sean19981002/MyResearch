@@ -107,15 +107,20 @@ class Data_crawl:
     
     def Get_Followers_Multi(self, target_users:list, file_path:str):
         paralle = len(self.token)
+        piece = int(len(target_users) / paralle)
+        if len(target_users) % paralle > 0:
+            piece += 1
         process = list()
         manager = mp.Manager()
         result = manager.dict()
-        tweet_list = list(self.tweets_df['id'])
+        user = chunks(target_users, piece)
+
+
         print("Start dispatching multi process...")
         for i in range(paralle):
             t = mp.Process(
                 target=Get_Followers, 
-                args=(target_users, i, self.token[i], file_path, result,))
+                args=(target_users, user[i], i, self.token[i], file_path, result,))
             process.append(t)
         
         print("Start collecting followers of target users...")
@@ -134,7 +139,7 @@ class Data_crawl:
         paralle = len(self.token)
         process = list() # list saves multi-process
         manager = mp.Manager()
-        result = manager.dict() # for union results from every process
+        result = manager.list() # for union results from every process
         biden_tweets = list(self.tweets_df['id'])
         piece = int(len(target_user) / paralle)
         if len(target_user) % paralle > 0:
@@ -152,8 +157,8 @@ class Data_crawl:
         for i in range(paralle):
             process[i].join()
         
-        with open(file_path + "TargetUserTweet_total.json", 'w') as f:
-            x = json.dumps(result.copy())
-            json.dump(x, f, indent=True)
+        #with open(file_path + "TargetUserTweet_total.json", 'w') as f:
+        #    x = json.dumps(result.copy())
+        #    json.dump(x, f, indent=True)
         
         return result
