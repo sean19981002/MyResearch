@@ -82,9 +82,8 @@ def Get_Followers(target_users:list, user:list, index:int, token:str, file_path:
     """
     dict_followers = {} # key:user_id, value:list of follwers
     client = tweepy.Client(bearer_token=token, wait_on_rate_limit=True)
+    
     # get followers id
-    f = open(file_path + '_' + str(index) + '_follwer.json', 'w')
-
     for user_id in user:
         followers_list = []
         # 利用 user_id 去尋找此 user 的 followers, 並存進 list
