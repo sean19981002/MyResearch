@@ -15,7 +15,7 @@ import multiprocessing as mp
 from tqdm import tqdm
 import datetime
 import re
-
+from os import path
 
 
 # if there are multiple json file need to be union，use ths function.
@@ -72,29 +72,56 @@ def Get_Retweeters(tweet_list:list, index:int, token:str, file_path:str, result)
             result |= dict_retweet_id
         f.close()
     
+
+
+
 # get follwers of everyusers
-def Get_Followers(target_users:list, user:list, index:int, token:str, file_path:str, result):
+def Get_Followers(target_users:list, user:list, index:int, token:str, file_path:str, result, exist:list):
     """
     this api will return a dict.
     key is user_id.
     value is list of follwers of this user.
     the dict will save as .json file, file name is [index]_follower.json
     """
-    dict_followers = {} # key:user_id, value:list of follwers
-    client = tweepy.Client(bearer_token=token, wait_on_rate_limit=True)
+    dict_followers = dict() # key:user_id, value:list of follwers
+    if path.exists(file_path + "%d_followers.json" % index):
+        with open(file_path + "%d_followers.json" % index, "r") as f:
+            dict_followers = json.load(f)
     
-    # get followers id
-    for user_id in user:
-        followers_list = []
-        # 利用 user_id 去尋找此 user 的 followers, 並存進 list
-        for follower in tweepy.Paginator(client.get_users_followers, user_id).flatten():
-            if follower.id in target_users:
-                followers_list.append(follower.id)
-        
-        with open(file_path + "%d_followers.json" % index, "w") as f:
-            dict_followers[user_id] = followers_list
+    client = tweepy.Client(bearer_token=token, wait_on_rate_limit=True)
+    try:
+        # get followers id
+        for user_id in user:
+            followers_list = []
+            if user_id in exist: # some targets may finish crawling already.
+                continue # then we don't have to craw the followers of this one.
+
+            # 利用 user_id 去尋找此 user 的 followers, 並存進 list
+            for follower in tweepy.Paginator(client.get_users_followers, user_id).flatten():
+                if follower.id in target_users:
+                    followers_list.append(follower.id)
+            
+            with open(file_path + "%d_followers.json" % index, "w") as f:
+                dict_followers[user_id] = followers_list
             t = json.dump(dict_followers, f, indent=True) # write json file
-    result |= dict_followers
+            #result |= dict_followers
+    
+    except: # find those targets who hasn't get follower's list
+        print("process-%d has crashed !")
+        not_finish = list()
+        with open(file_path + "%d_followers.json" % index, "r") as f:
+            json_f = json.load(f)
+            keys = list(json_f.keys())
+            for i in user:
+                if i in keys:   continue
+                else:           not_finish.append(i)
+        
+        if len(not_finish) > 0:
+            with open("NotFinish_Followers/%d.txt", "w") as f:
+                for i in not_finish:
+                    f.write(str(i) + "\n")
+
+        
  
 
 

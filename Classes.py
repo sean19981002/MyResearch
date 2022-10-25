@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from IPython.display import display
 from threading import Thread
 from functions import *
+from os import path
+
 
 class MyThread(Thread):
     def __init__(self, func, args):
@@ -114,16 +116,24 @@ class Data_crawl:
         manager = mp.Manager()
         result = manager.dict()
         user = list( chunks(target_users, piece) )
-
+        exist = list()
+        for i in range(paralle):
+            # print(i)
+            if path.exists(file_path + "%d_followers.json" % i):
+                with open(file_path + "%d_followers.json" % i, "r") as f:
+                    file = json.load(f)
+                    exist.extend( list(file.keys()) )
+        print("Targets who Already finishing capture : %d" % len(exist))
         print("Start dispatching multi process...")
         for i in range(paralle):
             t = mp.Process(
                 target=Get_Followers, 
-                args=(target_users, user[i], i, self.token[i], file_path, result,))
+                args=(target_users, user[i], i, self.token[i], file_path, result, exist, ))
             process.append(t)
         
         print("Start collecting followers of target users...")
         for i in range(paralle):
+            time.sleep(i * 40) # wait some time for avoiding process crash
             process[i].start()
 
         print("Wait for all process....")
@@ -131,7 +141,7 @@ class Data_crawl:
             process[i].join()
         
         print("Collecting Done !")
-        return result # dict {user_id : [followers]}
+        #return result # dict {user_id : [followers]}
     
     
     def Get_User_Tweets_Multi(self, file_path:str, target_user:list):
