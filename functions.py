@@ -103,11 +103,11 @@ def Get_Followers(target_users:list, user:list, index:int, token:str, file_path:
             
             with open(file_path + "%d_followers.json" % index, "w") as f:
                 dict_followers[user_id] = followers_list
-            t = json.dump(dict_followers, f, indent=True) # write json file
+                t = json.dump(dict_followers, f, indent=True) # write json file
             #result |= dict_followers
     
     except: # find those targets who hasn't get follower's list
-        print("process-%d has crashed !")
+        
         not_finish = list()
         with open(file_path + "%d_followers.json" % index, "r") as f:
             json_f = json.load(f)
@@ -117,10 +117,11 @@ def Get_Followers(target_users:list, user:list, index:int, token:str, file_path:
                 else:           not_finish.append(i)
         
         if len(not_finish) > 0:
-            with open("NotFinish_Followers/%d.txt", "w") as f:
+            with open("NotFinish_Followers/%d.txt" % index, "w") as f:
                 for i in not_finish:
                     f.write(str(i) + "\n")
-
+        print("process-%d has crashed !" % index)
+        sys.stdout.flush()
         
  
 
@@ -237,7 +238,6 @@ def Get_User_Tweets(token:str, target_users:list, biden_tweets:list, num:int, re
     
     print("process %d waiting..." % num)
     sys.stdout.flush()
-    time.sleep(180 * num)
     print("process %d start running !\n" % num)
     sys.stdout.flush()
     for id in target_users:

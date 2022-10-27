@@ -112,17 +112,20 @@ class Data_crawl:
         piece = int(len(target_users) / paralle)
         if len(target_users) % paralle > 0:
             piece += 1
+
         process = list()
         manager = mp.Manager()
         result = manager.dict()
-        user = list( chunks(target_users, piece) )
         exist = list()
         for i in range(paralle):
             # print(i)
             if path.exists(file_path + "%d_followers.json" % i):
                 with open(file_path + "%d_followers.json" % i, "r") as f:
                     file = json.load(f)
-                    exist.extend( list(file.keys()) )
+                    for key in list(file.keys()):
+                        exist.append(int(key))
+        
+        user = list(chunks(target_users, piece))
         print("Targets who Already finishing capture : %d" % len(exist))
         print("Start dispatching multi process...")
         for i in range(paralle):
@@ -133,7 +136,7 @@ class Data_crawl:
         
         print("Start collecting followers of target users...")
         for i in range(paralle):
-            time.sleep(i * 40) # wait some time for avoiding process crash
+            time.sleep(i * 20) # wait some time for avoiding process crash
             process[i].start()
 
         print("Wait for all process....")
@@ -161,6 +164,7 @@ class Data_crawl:
             process.append(p)
         
         for i in range(paralle):
+            time.sleep(i * 60)
             process[i].start()
         
         for i in range(paralle):
