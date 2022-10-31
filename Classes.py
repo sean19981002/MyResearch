@@ -148,7 +148,12 @@ class Data_crawl:
     
     
     def Get_User_Tweets_Multi(self, file_path:str, target_user:list):
-        paralle = len(self.token)
+        token = [
+            'AAAAAAAAAAAAAAAAAAAAAA0rhwEAAAAAwg6pSXd9zTPDUu70sBe7aA1x6SQ%3D4e492L05dARGO4yEj9LZ2POAjq4oGkwVQQBCPQKfc2ocoV8sth', # 竟為
+            'AAAAAAAAAAAAAAAAAAAAAKkViAEAAAAAMh5Mzxxsa6pTshJUf1cTvjQIhFo%3DzO9GnsfJjH4LjOvV3PldqYkda3gyTTxBh1pEZGS3oQk7kdnX7i',
+            #'AAAAAAAAAAAAAAAAAAAAAIPvbAEAAAAAh3nRGhJ1HJjYHAwyxn7F5tm91js%3DpUaTtSLOgLxWFGdDaL2cDgHbJyiYQt8UMbWe8s9hfO8UIBK3xu' # mine
+        ]
+        paralle = len(token)
         process = list() # list saves multi-process
         manager = mp.Manager()
         result = manager.list() # for union results from every process
@@ -156,22 +161,29 @@ class Data_crawl:
         piece = int(len(target_user) / paralle)
         if len(target_user) % paralle > 0:
             piece += 1
+        exist = list()
         target_user = list(chunks(target_user, piece))
-        for i in range(paralle):
-            p = mp.Process(
-                target = Get_User_Tweets,
-                args = (self.token[i], target_user[i], biden_tweets, i, result))
-            process.append(p)
+        with open('exist.txt', 'r') as f:
+            for line in f:
+                ele = line.replace('\n', '')
+                exist.append(int(ele))
+
+
+        try:
+            for i in range(paralle):
+                p = mp.Process(
+                    target = Get_User_Tweets,
+                    args = (token[i], target_user[i], biden_tweets, i, result, exist))
+                process.append(p)
+            
+            for i in range(paralle):
+                time.sleep(i * 10)
+                process[i].start()
+            
+            for i in range(paralle):
+                process[i].join()
         
-        for i in range(paralle):
-            time.sleep(i * 60)
-            process[i].start()
-        
-        for i in range(paralle):
-            process[i].join()
-        
-        #with open(file_path + "TargetUserTweet_total.json", 'w') as f:
-        #    x = json.dumps(result.copy())
-        #    json.dump(x, f, indent=True)
+        except:
+            print("Getting user tweets crashed !")
         
         return result

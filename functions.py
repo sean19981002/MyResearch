@@ -1,6 +1,5 @@
 import sys
 import threading
-from unittest import result
 import pandas as pd
 import tweepy
 import requests
@@ -13,7 +12,6 @@ import time
 import queue 
 import multiprocessing as mp
 from tqdm import tqdm
-import datetime
 import re
 from os import path
 
@@ -223,7 +221,7 @@ def FindTargetUser_MultiCore(bound:int, retweeters:dict):
     return list(result)
 
 
-def Get_User_Tweets(token:str, target_users:list, biden_tweets:list, num:int, result):
+def Get_User_Tweets(token:str, target_users:list, biden_tweets:list, num:int, result, exist:list):
     """
     This api is for searching the the tweet's wall of target users,
     to see which post of their's are the retweets of Biden's tweets in last 7 days.
@@ -235,47 +233,64 @@ def Get_User_Tweets(token:str, target_users:list, biden_tweets:list, num:int, re
         bearer_token = token,
         wait_on_rate_limit = True 
     )
-    
+
     print("process %d waiting..." % num)
     sys.stdout.flush()
     print("process %d start running !\n" % num)
     sys.stdout.flush()
-    for id in target_users:
-        colloection = list()
-        for tweet in tweepy.Paginator(
-            client.get_users_tweets, 
-            id=id, 
-            end_time='2022-10-17T00:00:00Z',
-            start_time='2022-10-10T00:00:00Z',
-            tweet_fields=['created_at','referenced_tweets'],
-            expansions=['referenced_tweets.id'], 
-            max_results=100).flatten(limit=5000):
 
-            # parsing the referenced_tweet from <Referenced...> into id only
-            s = str(tweet.referenced_tweets)
+    try:
+        for id in target_users:
+            if id not in exist:
+                colloection = list()
+                for tweet in tweepy.Paginator(
+                    client.get_users_tweets, 
+                    id=id, 
+                    end_time='2022-10-17T00:00:00Z',
+                    start_time='2022-10-10T00:00:00Z',
+                    tweet_fields=['created_at','referenced_tweets'],
+                    expansions=['referenced_tweets.id'], 
+                    max_results=100).flatten():
 
-            if "id" in s: # if this tweet of the user has retweet any tweet
-                ref_tweet = FindReferencedID(s=s)
-                if ref_tweet != '':
-                    ref_tweet = int(ref_tweet)
-                    if ref_tweet in biden_tweets:
-                        tmp = [id, ref_tweet, tweet.id, tweet.created_at, ref_tweet]
-                        colloection.append(tmp)
-        
-        if len(colloection) > 0:
-        # append referenced tweets for user
-            user_tweet_id[id] = colloection
-            #with open("TargetUserTweet%d.json" % num, "w") as f:
-            #   json_f = json.dumps(user_tweet_id, f, indent=True)
-            #   json.dump(user_tweet_id, f, indent=True)
-            with open("%d.txt" % num, "a") as f:
-                for i in colloection:
-                    for j in i:
-                        f.write(str(j) + " ")
-                    f.write("\n")
+                    # parsing the referenced_tweet from <Referenced...> into id only
+                    s = str(tweet.referenced_tweets)
 
-                f.write("\n")
+                    if "id" in s: # if this tweet of the user has retweet any tweet
+                        ref_tweet = FindReferencedID(s=s)
+                        if ref_tweet != '':
+                            ref_tweet = int(ref_tweet)
+                            if ref_tweet in biden_tweets:
+                                tmp = [id, ref_tweet, tweet.id, tweet.created_at]
+                                colloection.append(tmp)
                 
+                if len(colloection) > 0:
+                # append referenced tweets for user
+                    user_tweet_id[id] = colloection
+                    with open("%d.txt" % num, "a") as f:
+                        for i in colloection:
+                            for j in i:
+                                f.write(str(j) + " ")
+                            
+                            f.write("\n")
+                        f.write("=" * 80)
+                        f.write("\n")
+
+    except Exception as e:
+        with open("%d_unfinish.txt" % num, "a") as f:
+            captured = list(user_tweet_id.keys())
+            for i in captured:
+                if int(i) in exist:  continue # in exists
+                else:  
+                    f.write(str(e) + "\n")
+                    f.write("=-" * 40) 
+                    f.write("\n" + str(i))
+        print("%d Process has crashed !" % num)
+        sys.stdout.flush()
+
+    finally:
+        print("%d Process done !" % num)         
+
+
 
     #result |= user_tweet_id
 
