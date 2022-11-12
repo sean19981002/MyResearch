@@ -58,3 +58,7 @@
 >       3. 比對 reference id 是否 in 那 57 篇 Biden tweets，有的話建成 list，將 此篇推文的 id, timestamp, reference id 存進list，再將此 list 存進另外一個 list。
 >       4. 每抓完一個 user 的資料，將上述二維的 list 指派進 dict，此 dict 的 key 為 id of this target user。
 >       5. 寫入一次檔案
+
+> # 11/8 Meeting
+>   + ### 記得把 base data 用好才上 model。
+>   + ### 跟學長學 GConv，要如何重現結果

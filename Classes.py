@@ -26,11 +26,11 @@ class MyThread(Thread):
 
 class Data_crawl:
 
-    def __init__(self, token:list):
+    def __init__(self, token:list, file_path:str):
         self.client = [] #  list of tweepy.client auth objects
         self.token = token # list of multiple tokens
         today = filename = str(datetime.date.today()) # 用當天日期當作檔案名稱
-        self.filename = 'Biden/' + today + '/' + today
+        self.file_path = file_path
         self.tweets_df : pd.DataFrame
 
     def Get_Tweets_Dataframe(self, query='', tweet_fields=[], wanna_download=False, tweet_df=pd.DataFrame()):
@@ -81,7 +81,7 @@ class Data_crawl:
 
 
 
-    def Get_Retweeters_Multi(self, filename:str):
+    def Get_Retweeters_Multi(self):
         # choose how many pieces
         tweet_list = list(self.tweets_df['id'])
         pieces = int(len(tweet_list) / len(self.token))
@@ -89,30 +89,30 @@ class Data_crawl:
             pieces += 1
         # slicing list into pieces
         tweet_list = list(chunks(tweet_list, pieces))
-        values = []
-
+        manager = mp.Manager()
+        result = manager.dict()
+        file_path = self.file_path + 'retweeters/'
         # multi threading 
-        threads = []
+        process = []
         for i in range(len(self.token)):
-            t = MyThread(func=Get_Retweeters, args=(tweet_list[i], i, self.token[i], filename, ))
-            threads.append(t)
+            p = mp.Process(target=Get_Retweeters, args=(tweet_list[i], i, self.token[i], file_path, result, ))
+            process.append(p)
         # start running
         for i in range(len(self.token)):
-            time.sleep(60 * i) # avoid resource not enough
-            threads[i].start()
-        # join() for wait all threads done.
+            time.sleep(15 * i) # avoid resource not enough
+            process[i].start()
+        # join() for wait all process done.
         for i in range(len(self.token)):
-            threads[i].join()
-        # get return values
-        #for i in range(pieces):
-        #   values.append(threads[i].get_results())
+            process[i].join()
+        return dict(result)
     
-    def Get_Followers_Multi(self, target_users:list, file_path:str):
+    def Get_Followers_Multi(self, target_users:list):
         paralle = len(self.token)
         piece = int(len(target_users) / paralle)
         if len(target_users) % paralle > 0:
             piece += 1
 
+        file_path = self.file_path + 'followers/'
         process = list()
         manager = mp.Manager()
         result = manager.dict()
@@ -144,36 +144,39 @@ class Data_crawl:
             process[i].join()
         
         print("Collecting Done !")
+        return dict(result)
         #return result # dict {user_id : [followers]}
     
     
-    def Get_User_Tweets_Multi(self, file_path:str, target_user:list):
-        token = [
-            'AAAAAAAAAAAAAAAAAAAAAA0rhwEAAAAAwg6pSXd9zTPDUu70sBe7aA1x6SQ%3D4e492L05dARGO4yEj9LZ2POAjq4oGkwVQQBCPQKfc2ocoV8sth', # 竟為
-            'AAAAAAAAAAAAAAAAAAAAAKkViAEAAAAAMh5Mzxxsa6pTshJUf1cTvjQIhFo%3DzO9GnsfJjH4LjOvV3PldqYkda3gyTTxBh1pEZGS3oQk7kdnX7i',
-            #'AAAAAAAAAAAAAAAAAAAAAIPvbAEAAAAAh3nRGhJ1HJjYHAwyxn7F5tm91js%3DpUaTtSLOgLxWFGdDaL2cDgHbJyiYQt8UMbWe8s9hfO8UIBK3xu' # mine
-        ]
+    def Get_User_Tweets_Multi(self, target_user:list, biden_tweets:list):
+        
+        token = self.token
         paralle = len(token)
         process = list() # list saves multi-process
         manager = mp.Manager()
         result = manager.list() # for union results from every process
-        biden_tweets = list(self.tweets_df['id'])
         piece = int(len(target_user) / paralle)
+        file_path = self.file_path + 'user_tweets/'
+
         if len(target_user) % paralle > 0:
             piece += 1
         exist = list()
         target_user = list(chunks(target_user, piece))
-        with open('exist.txt', 'r') as f:
-            for line in f:
-                ele = line.replace('\n', '')
-                exist.append(int(ele))
+        
+        if path.exists(file_path):
+            for i in range(len(token)):
+                if path.exists(file_path + '%d.json'%i): # check files exist or not
+                    with open(file_path + '%d.json'%i, 'r') as f:
+                        json_file = json.load(f)
+                        for key in json_file.keys(): # key is target user's id
+                            exist.append(int(key))
 
 
         try:
             for i in range(paralle):
                 p = mp.Process(
                     target = Get_User_Tweets,
-                    args = (token[i], target_user[i], biden_tweets, i, result, exist))
+                    args = (token[i], target_user[i], biden_tweets, i, result, exist, file_path, ))
                 process.append(p)
             
             for i in range(paralle):
@@ -184,6 +187,8 @@ class Data_crawl:
                 process[i].join()
         
         except:
-            print("Getting user tweets crashed !")
+            print("Process of getting user's tweets crashed !")
         
-        return result
+        finally:
+            print("jobs done !")
+            return result
