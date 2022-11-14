@@ -150,6 +150,7 @@ class Data_crawl:
     
     def Get_User_Tweets_Multi(self, target_user:list, biden_tweets:list):
         
+        exist = set()
         token = self.token
         paralle = len(token)
         process = list() # list saves multi-process
@@ -157,21 +158,34 @@ class Data_crawl:
         result = manager.list() # for union results from every process
         piece = int(len(target_user) / paralle)
         file_path = self.file_path + 'user_tweets/'
-
-        if len(target_user) % paralle > 0:
-            piece += 1
-        exist = list()
-        target_user = list(chunks(target_user, piece))
-        
         if path.exists(file_path):
-            for i in range(len(token)):
+            for i in range(14):
                 if path.exists(file_path + '%d.json'%i): # check files exist or not
                     with open(file_path + '%d.json'%i, 'r') as f:
                         json_file = json.load(f)
                         for key in json_file.keys(): # key is target user's id
-                            exist.append(int(key))
+                            exist.add(int(key))
 
+            for i in range(14):
+                if path.exists(file_path + '%d.txt'%i):
+                    with open(file_path + '%d.txt'%i, 'r') as f:
+                        lines = f.readlines()
+                        for line in lines:
+                            if '=' not in line:
+                                s = line.split(' ')
+                                exist.add(int(s[0]))
+            exist = list(exist)
+            print("Already crawled :", len(exist))
+            print("Target users :", len(target_user))
 
+        if len(target_user) == len(exist):
+            print("ALL data had already crawled !")
+            return
+
+        if len(target_user) % paralle > 0:
+            piece += 1
+        target_user = list(chunks(target_user, piece))
+        
         try:
             for i in range(paralle):
                 p = mp.Process(
@@ -191,4 +205,3 @@ class Data_crawl:
         
         finally:
             print("jobs done !")
-            return result

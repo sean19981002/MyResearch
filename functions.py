@@ -247,11 +247,8 @@ def Get_User_Tweets(token:str, target_users:list, biden_tweets:list, num:int, re
     the result will be a dict -> {user_id : list(their tweets id) }.
     The length of every list of target users should be equal to their retweet count.
     """
-    user_tweet_id = dict()
-    if path.exists(file_path + '%d.json'):
-        with open(file_path + '%d.json', 'r') as f:
-            user_tweet_id = json.load(f)
-            user_tweet_id = dict(user_tweet_id)
+
+
     client = tweepy.Client(
         bearer_token = token,
         wait_on_rate_limit = True 
@@ -292,18 +289,8 @@ def Get_User_Tweets(token:str, target_users:list, biden_tweets:list, num:int, re
                                 # for txt
                                 tmp = [id, ref_tweet, tweet.id, tweet.created_at] 
                                 colloection.append(tmp)
-
-                                # for json
-                                tmp = {
-                                    'target_id':id,
-                                    'referenced' : ref_tweet,
-                                    'tweet_id' : str(tweet.id),
-                                    'created_at' : str(tweet.created_at)
-
-                                }
-                                value.append(tmp)
                 
-                user_tweet_id[id] = value
+               
                 if len(colloection) > 0: # for txt
                 # append referenced tweets for user     
                     with open(file_path + "%d.txt" % num, "a") as f:
@@ -313,9 +300,12 @@ def Get_User_Tweets(token:str, target_users:list, biden_tweets:list, num:int, re
                             f.write("\n")
                         f.write("=" * 80)
                         f.write("\n")
+                else:
+                    with open(file_path + "%d.txt" % num, "a") as f:
+                        f.write(str(id) + " None\n")
+                        f.write("=" * 80)
+                        f.write("\n")
                 
-                with open(file_path + '%d.json' % num, 'w') as f:
-                    json.dump(user_tweet_id, f, indent=True)
 
 
     except Exception as e:
@@ -326,11 +316,6 @@ def Get_User_Tweets(token:str, target_users:list, biden_tweets:list, num:int, re
         print("Process %d has crashed !" % num)
         sys.stdout.flush()      
 
-    finally:
-        with open(file_path + '%d.json' % num, 'w') as f:
-            json.dump(user_tweet_id, f, indent=True)
-
-    #result |= user_tweet_id
 
     
     
