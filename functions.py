@@ -211,29 +211,22 @@ def Get_Followers(target_users:list, user:list, index:int, token:str, file_path:
                 continue # then we don't have to craw the followers of this one.
 
             # 利用 user_id 去尋找此 user 的 followers, 並存進 list
-            for follower in tweepy.Paginator(client.get_users_followers, user_id).flatten():
+            for follower in tweepy.Paginator(client.get_users_followers, user_id, max_results=1000).flatten():
                 if follower.id in target_users:
                     followers_list.append(follower.id)
             
             with open(file_path + "%d_followers.json" % index, "w") as f:
                 dict_followers[user_id] = followers_list
-                t = json.dump(dict_followers, f, indent=True) # write json file
-            #result |= dict_followers
+                json.dump(dict_followers, f, indent=True) # write json file
+            
+            result.update(dict_followers)
     
     except: # find those targets who hasn't get follower's list
         
-        not_finish = list()
-        with open(file_path + "%d_followers.json" % index, "r") as f:
-            json_f = json.load(f)
-            keys = list(json_f.keys())
-            for i in user:
-                if i in keys:   continue
-                else:           not_finish.append(i)
+        with open(file_path + "%d_followers.json" % index, "w") as f:
+            json.dump(dict_followers, f, indent=True) # write json file
         
-        if len(not_finish) > 0:
-            with open("NotFinish_Followers/%d.txt" % index, "w") as f:
-                for i in not_finish:
-                    f.write(str(i) + "\n")
+        result.update(dict_followers)
         print("process-%d has crashed !" % index)
         sys.stdout.flush()
         

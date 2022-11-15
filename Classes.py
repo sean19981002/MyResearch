@@ -106,6 +106,7 @@ class Data_crawl:
             process[i].join()
         return dict(result)
     
+    
     def Get_Followers_Multi(self, target_users:list):
         paralle = len(self.token)
         piece = int(len(target_users) / paralle)
@@ -125,9 +126,11 @@ class Data_crawl:
                     for key in list(file.keys()):
                         exist.append(int(key))
         
+        print("Already crawled :", len(exist))
+        print("Target users :", len(target_users))
+
         user = list(chunks(target_users, piece))
-        print("Targets who Already finishing capture : %d" % len(exist))
-        print("Start dispatching multi process...")
+
         for i in range(paralle):
             t = mp.Process(
                 target=Get_Followers, 
@@ -136,7 +139,6 @@ class Data_crawl:
         
         print("Start collecting followers of target users...")
         for i in range(paralle):
-            time.sleep(i * 20) # wait some time for avoiding process crash
             process[i].start()
 
         print("Wait for all process....")
