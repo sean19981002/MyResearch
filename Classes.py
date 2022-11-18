@@ -139,6 +139,7 @@ class Data_crawl:
         
         print("Start collecting followers of target users...")
         for i in range(paralle):
+            time.sleep(1)
             process[i].start()
 
         print("Wait for all process....")

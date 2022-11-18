@@ -206,9 +206,12 @@ def Get_Followers(target_users:list, user:list, index:int, token:str, file_path:
     try:
         # get followers id
         for user_id in user:
+
             followers_list = []
             if user_id in exist: # some targets may finish crawling already.
                 continue # then we don't have to craw the followers of this one.
+            print(datetime.datetime.now(), "Process %d current :"%index, user_id)
+            sys.stdout.flush()
 
             # 利用 user_id 去尋找此 user 的 followers, 並存進 list
             for follower in tweepy.Paginator(client.get_users_followers, user_id, max_results=1000).flatten():
