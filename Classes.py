@@ -125,7 +125,8 @@ class Data_crawl:
                     file = json.load(f)
                     for key in list(file.keys()):
                         exist.append(int(key))
-        
+
+        # 要取 complement's set of target_users, for deleting exsisted users
         print("Already crawled :", len(exist))
         print("Target users :", len(target_users))
 
@@ -209,5 +210,29 @@ class Data_crawl:
         finally:
             print("jobs done !")
     
-    def Get_User_Profile(self, target_users:list):
+    def Get_User_Profile(self, target_user:list):
         file_path = self.file_path + "user_profile/"
+        paralle = len(self.token)
+
+        exist = set()
+        if path.exists(file_path):
+            for i in range(14):
+                if path.exists(file_path + "%d.json" % i):
+                    with open(file_path + "%d.json" % i, 'r') as f:
+                        json_obj = json.load(f)
+                        for key in json_obj.keys():
+                            exist.add(int(key))
+
+        if len(target_user) % paralle > 0:
+            piece += 1
+        user = list(chunks(target_user, piece))
+
+        processes = []
+        for i in range(paralle):
+            p = mp.Process(target=User_Profile, args=(user[i], self.token[i], i, exist, file_path, ))
+            processes.append(p)
+        for i in range(paralle):
+            processes[i].start()
+        for i in range(paralle):
+            processes[i].join()
+        
