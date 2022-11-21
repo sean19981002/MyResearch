@@ -208,3 +208,6 @@ class Data_crawl:
         
         finally:
             print("jobs done !")
+    
+    def Get_User_Profile(self, target_users:list):
+        file_path = self.file_path + "user_profile/"

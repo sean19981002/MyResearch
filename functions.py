@@ -313,5 +313,38 @@ def Get_User_Tweets(token:str, target_users:list, biden_tweets:list, num:int, re
         sys.stdout.flush()      
 
 
-    
-    
+def User_Profile(user:list, token:str, index:int, exist:set, file_path:str):
+
+    result = dict()
+    client = tweepy.Client(
+        bearer_token = token,
+        wait_on_rate_limit = True
+    )
+    for id in user: # iterate user id
+        profile = client.get_user( 
+            id = id,
+            user_fields = ['profile_image_url','location','entities','public_metrics','verified','created_at','protected']
+        )
+
+        # returned values from tweepy.Client.get_user()
+        location = str(profile.data.location)
+        followers_count = int(profile.data.public_metrics['followers_count'])
+        following_count = int(profile.data.public_metrics['following_count'])
+        tweet_count = int(profile.data.public_metrics['tweet_count'])
+        created_at = str(profile.data.created_at)
+        verified = profile.data.verified
+        protected = profile.data.protected
+
+        tmp_dict = {
+            "location" : location,
+            "followers_count" : followers_count,
+            "following_count" : following_count,
+            "tweet_count" : tweet_count,
+            "verified" : verified,
+            "created_at" : created_at,
+            'protected' : protected
+        }
+        result[id] = tmp_dict
+
+        with open(file_path + "%d.json"%index, "w") as f:
+            json.dump(result, f, indent=2)
