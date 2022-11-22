@@ -210,7 +210,7 @@ class Data_crawl:
         finally:
             print("jobs done !")
     
-    def Get_User_Profile(self, target_user:list):
+    def Get_User_Profile_Multi(self, target_user:list):
         file_path = self.file_path + "user_profile/"
         paralle = len(self.token)
 
@@ -223,6 +223,7 @@ class Data_crawl:
                         for key in json_obj.keys():
                             exist.add(int(key))
 
+        piece = int(len(target_user)/paralle)
         if len(target_user) % paralle > 0:
             piece += 1
         user = list(chunks(target_user, piece))
@@ -231,8 +232,10 @@ class Data_crawl:
         for i in range(paralle):
             p = mp.Process(target=User_Profile, args=(user[i], self.token[i], i, exist, file_path, ))
             processes.append(p)
+
         for i in range(paralle):
             processes[i].start()
+            
         for i in range(paralle):
             processes[i].join()
         
