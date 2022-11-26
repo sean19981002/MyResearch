@@ -109,29 +109,35 @@ class Data_crawl:
     
     def Get_Followers_Multi(self, target_users:list):
         paralle = len(self.token)
-        piece = int(len(target_users) / paralle)
-        if len(target_users) % paralle > 0:
-            piece += 1
-
         file_path = self.file_path + 'followers/'
         process = list()
         manager = mp.Manager()
         result = manager.dict()
-        exist = list()
+        exist = set()
         for i in range(paralle):
             # print(i)
             if path.exists(file_path + "%d_followers.json" % i):
                 with open(file_path + "%d_followers.json" % i, "r") as f:
                     file = json.load(f)
                     for key in list(file.keys()):
-                        exist.append(int(key))
+                        exist.add(int(key))
 
         # 要取 complement's set of target_users, for deleting exsisted users
         print("Already crawled :", len(exist))
-        print("Target users :", len(target_users))
+        print("Target users :", len(target_users))   
+        target_users = set(target_users) - set(exist)
+        print("Rest of:", len(target_users))
+        if len(target_users) == 0:
+            return
+        else:
+            target_users = list(target_users)
+            exist = list(exist)
 
+        piece = int(len(target_users) / paralle)
+        if len(target_users) % paralle > 0:
+            piece += 1
+        
         user = list(chunks(target_users, piece))
-
         for i in range(paralle):
             t = mp.Process(
                 target=Get_Followers, 
@@ -148,8 +154,6 @@ class Data_crawl:
             process[i].join()
         
         print("Collecting Done !")
-        return dict(result)
-        #return result # dict {user_id : [followers]}
     
     
     def Get_User_Tweets_Multi(self, target_user:list, biden_tweets:list):
@@ -226,8 +230,17 @@ class Data_crawl:
         piece = int(len(target_user)/paralle)
         if len(target_user) % paralle > 0:
             piece += 1
+        
+        print("Target users :", len(target_user))
+        print("Already crawled :", len(exist))
+        target_user = set(target_user) - set(exist) # complements
+        print("Rest of :", len(target_user))
+        if len(target_user) == 0:
+            return
+        else:
+            target_user = list(target_user)
+    
         user = list(chunks(target_user, piece))
-
         processes = []
         for i in range(paralle):
             p = mp.Process(target=User_Profile, args=(user[i], self.token[i], i, exist, file_path, ))
