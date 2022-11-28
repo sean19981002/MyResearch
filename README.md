@@ -46,7 +46,7 @@
 >       - follow 關係建 base graph(一張)
 >
 >   + 後七天的 tweet 抓下來
->       - 再看 target users(爬他們的強) 的 retweet 時間
+>       - 再看 target users(User tweets crawling) 的 retweet 時間
 >       - 建出 12 * tweets 張 data graph 
 >       - 12 個時間點：6, 9, 12, 15, 18, 24, 30, 36, 42, 48, 54, 60 hr.
 >       - 用 active/inactive 的關係建 data graph
