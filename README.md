@@ -33,7 +33,7 @@
 
 > - ## 學長：
 >   + ### 盡快處理 biden dataset 的 active, inactive
->   + hashtag 維度降低
+>   + ### hashtag 維度降低
 >   + ### 看能否調整 base graph 的 edge weight，看能不能多一點東西進來(e.x. retweet數，朋友數...等等) 
 >   + ### negative sampling
 >   + ### 12 小時裡面已經確定 retweet，加上 model 預測的 active/inactive，才是對的 -> 目標二
@@ -52,18 +52,19 @@
 >       - ### 用 active/inactive 的關係建 data graph
 
 > # 10/17
->   + functions.py :
+>   + ## functions.py :
 >       1. ### 使用 target users 的 id，去抓取每個 target user 牆上的 tweet。
 >       2. ### 抓出 reference id，將多餘字元去除。
 >       3. ### 比對 reference id 是否 in 那 57 篇 Biden tweets，有的話建成 list，將 此篇推文的 id, timestamp, reference id 存進list，再將此 list 存進另外一個 list。
->       4. 每抓完一個 user 的資料，將上述二維的 list 指派進 dict，此 dict 的 key 為 id of this target user。
->       5. 寫入一次檔案
+>       4. ### 每抓完一個 user 的資料，將上述二維的 list 指派進 dict，此 dict 的 key 為 id of this target user。
+>       5. ### 寫入一次檔案
 
 > # 11/8 Meeting
 >   + ### 記得把 base data 用好才上 model。
 >   + ### 跟學長學 GConv，要如何重現結果
 
 > # 11/29
+> + ## <font color=#FFFF00> 對於數據統計（target user，followers 的對象，user features 的對象統計須做完善的筆記） </font>
 > + ## User Profile (Feature)
 >   + ### location 不要二分法, 分為五類或是七類(預計依照世界地圖幾大洋幾大洲？)
 > + ## base graph 先 build, data graph 先看 last 7th days 的轉推分佈再決定 
