@@ -217,6 +217,7 @@ def Get_Followers(target_users:list, user:list, index:int, token:str, file_path:
             for follower in tweepy.Paginator(client.get_users_followers, user_id, max_results=1000).flatten():
                 if follower.id in target_users:
                     followers_list.append(follower.id)
+                    #following ：你关注的人，相当于微博中的“关注”；. followers：关注你的人，相当于微博中的“粉丝”。
             
             with open(file_path + "%d_followers.json" % index, "w") as f:
                 dict_followers[user_id] = followers_list
